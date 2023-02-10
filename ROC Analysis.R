@@ -1,25 +1,22 @@
 #ROC Analysis
 
-#install.packages("pROC")
 
 library(pROC)
 library(tidyverse)
 library(readxl)
 library(openxlsx)
 
-#install.packages("plotROC")
 library(ggplot2)
 library(plotROC)
 library(dplyr)
 library(tidyr)
 
-
+library(ROCR)
 library(tableone)
 library(summarytools)
 library(ggfortify)
 library(readxl)
 library(lubridate)
-#install.packages("xlsx")
 library(xlsx)
 
 
@@ -110,10 +107,23 @@ roc_df <- bind_rows(res)
 Top_variables <- roc_df %>% 
   filter(AUC > 0.8)
 
+
 roc_res_df <- bind_rows(res.roc)
 
+roc_df$Timepoint <- as.factor(roc_df$Timepoint)
 
 
+ggplot(roc_df, aes(x= Timepoint, y=AUC)) + facet_wrap(~Measurement, scales = "free") + theme_bw()
+
+
+
+###########Correlation Heatmap ###############
+
+library(ComplexHeatmap)
+Heatmap()
+
+
+###################ROC Curves################################
 
 
 Competition_FAB_df <- filter(roc_res_df, Measurement == "Competition FAB FITC" & Treatment == "Alutard")
@@ -150,7 +160,10 @@ rBet_v_1_sIgG_df <- filter(roc_res_df, Measurement == "rBet v 1 sIgG" & Treatmen
 ggplot(data= rBet_v_1_sIgG_df, aes(x=fpr,y=tpr)) + geom_line() + facet_grid( row= "Timepoint") + theme_bw() + ggtitle("rBet v 1 sIgG ROC")
 
  
-# Other way to plot them? 
+
+
+
+
 
 
 ##################### Logistic regression timepoint 1######################
