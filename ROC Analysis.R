@@ -29,6 +29,10 @@ df[,6:18] <- log(df[,6:18] + 0.001)
 #scale all 3:18
 df[,3:18] <- scale(df[,3:18])
 
+df$Timepoint <- as.factor(df$Timepoint)
+
+
+
 #########################Labels######################################
 
 # 
@@ -58,7 +62,7 @@ df[,3:18] <- scale(df[,3:18])
 
 
 
-###################Logistic regression for each measurement at differnt timepoints###############
+################### AUC for each measurement at differnt timepoints###############
 
 (measurements <- colnames(df)[3:18])
 
@@ -104,6 +108,9 @@ bind_rows(res.roc)
 
 roc_df <- bind_rows(res) 
 
+write.xlsx(roc_df, "C:\\Users\\Tomic\\OneDrive\\Dokumente\\Clinical_Trial_Master_project\\Clinical_Trail_BM41_Analysis\\data_generated\\Roc_curve_analysis.xlsx")
+
+
 Top_variables <- roc_df %>% 
   filter(AUC > 0.8)
 
@@ -113,14 +120,35 @@ roc_res_df <- bind_rows(res.roc)
 roc_df$Timepoint <- as.factor(roc_df$Timepoint)
 
 
+
+# Create a plot of the AUC values for each measurement, separated by treatment
+
+ggplot(Top_variables, aes(x = Timepoint, y = AUC, color = Treatment)) +
+  geom_point() +
+  facet_wrap(~ Measurement) +
+  theme_bw() +
+  labs(title = "AUC values for each measurement, separated by treatment",
+       x = "Timepoint",
+       y = "AUC")
+
+
+
+
+
 ggplot(roc_df, aes(x= Timepoint, y=AUC)) + facet_wrap(~Measurement, scales = "free") + theme_bw()
+
+ggplot(data = roc_df, aes(x = Timepoint, y = AUC, fill = Measurement)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Measurement, scales = "free")
+
 
 
 
 ###########Correlation Heatmap ###############
 
 library(ComplexHeatmap)
-Heatmap()
+
+Heatmap(roc_df)
 
 
 ###################ROC Curves################################
