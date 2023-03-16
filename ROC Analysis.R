@@ -20,14 +20,14 @@ library(lubridate)
 library(xlsx)
 
 
-dataset_tp <- read_xlsx("C:/Users/Tomic/OneDrive/Dokumente/R Data Science/Tables/dataset_timepoints.xlsx", col_names = TRUE)
+dataset_tp <- read_xlsx("data_generated/df_scaled.xlsx", col_names = TRUE)
 df <- dataset_tp
 
 #log transform and add 0.001
-df[,6:18] <- log(df[,6:18] + 0.001)
+#df[,6:18] <- log(df[,6:18] + 0.001)
 
 #scale all 3:18
-df[,3:18] <- scale(df[,3:18])
+#df[,3:18] <- scale(df[,3:18])
 
 df$Timepoint <- as.factor(df$Timepoint)
 
@@ -123,13 +123,19 @@ roc_df$Timepoint <- as.factor(roc_df$Timepoint)
 
 # Create a plot of the AUC values for each measurement, separated by treatment
 
-ggplot(Top_variables, aes(x = Timepoint, y = AUC, color = Treatment)) +
+
+ggplot(roc_df, aes(x = Timepoint, y = AUC, group = interaction(Measurement, Treatment), color = Treatment)) +
+  geom_hline(yintercept = c(0.8, 0.2), color = "grey") +
+  geom_hline(yintercept = 0.5, color = "black", size = 1) +
+  geom_line() +
   geom_point() +
-  facet_wrap(~ Measurement) +
+  facet_wrap(~ Measurement) + 
   theme_bw() +
-  labs(title = "AUC values for each measurement, separated by treatment",
+  labs(title = "AUC for predicting Treatment vs. Placebo",
        x = "Timepoint",
-       y = "AUC")
+       y = "AUC")+
+  ylim(0, max(1))
+
 
 
 
@@ -138,8 +144,9 @@ ggplot(Top_variables, aes(x = Timepoint, y = AUC, color = Treatment)) +
 ggplot(roc_df, aes(x= Timepoint, y=AUC)) + facet_wrap(~Measurement, scales = "free") + theme_bw()
 
 ggplot(data = roc_df, aes(x = Timepoint, y = AUC, fill = Measurement)) +
-  geom_bar(stat = "identity") +
+  geom_col() +
   facet_wrap(~Measurement, scales = "free")
+
 
 
 

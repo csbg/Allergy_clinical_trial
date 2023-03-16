@@ -373,9 +373,6 @@ p_values <- sapply(res, function(x) x$p.value)
 
 
 
-
-
-
  
 
 

@@ -3,10 +3,18 @@ library(dplyr)
 library(openxlsx)
 library(tidyverse)
 library(broom)
+library(tidyr)
+library(ggplot2)
+library(readxl)
+library(tableone)
 
 
 
-df_a <- read.xlsx("C:/Users/Tomic/OneDrive/Dokumente/Clinical_Trial_Master_project/Clinical_Trail_BM41_Analysis/data_generated/df.xlsx")
+
+# Load data ---------------------------------------------------------------
+
+
+df_a <- read.xlsx("data_generated/df_scaled.xlsx")
 
 colnames(df_a)
 
@@ -21,6 +29,7 @@ bm41_df <- df_a %>%
   filter(Timepoint == 3, Group == "BM41") 
 
 
+# Direct Analysis rBetv1 sIgG as proxy for response -----------------------
 
 # Get the top 5 and bottom 5 values of rBetv sIgG for Alutard treatment
 alutard_top5 <- alutard_df %>% 
@@ -28,11 +37,9 @@ alutard_top5 <- alutard_df %>%
   slice(1:5)
 
 
-
 alutard_bottom5 <- alutard_df %>% 
   arrange(rBet.v.1.sIgG) %>% 
   slice(1:5)
-
 
 
 # Assign response levels based on rBetv sIgG values for Alutard treatment
@@ -43,7 +50,6 @@ alutard_df <- alutard_df %>%
     rBet.v.1.sIgG %in% alutard_bottom5$rBet.v.1.sIgG ~ "low",
     TRUE ~ "intermediate"
   ))
-
 
 
 
@@ -69,16 +75,419 @@ bm41_df <- bm41_df %>%
 # Combine the two dataframes
 combined_df <- bind_rows(alutard_df, bm41_df)
 
+CreateTableOne( data=combined_df, strata="response_degree")
+
 
 write.xlsx(combined_df, "C:\\Users\\Tomic\\OneDrive\\Dokumente\\Clinical_Trial_Master_project\\Clinical_Trail_BM41_Analysis\\data_generated\\rBet_v_1_sIgG_Response_table.xlsx") 
 
 
+########################Alutard##################### 
+
+#Subset data 
+
+alutard_high_response <- alutard_top5[3:18]
+
+alutard_low_response <- alutard_bottom5[3:18]
+
+# Create an empty vector to store the p-values
+p_values_alutard <- vector(length = ncol(alutard_high_response))
+
+# Loop through each biomarker and perform a t-test
+
+(measurements <- colnames(alutard_df)[3:18])
+treatx <- 'Alutard'
+
+for (i in 1:ncol(alutard_high_response)) {
+  biomarker1 <- alutard_high_response[, i]
+  biomarker2 <- alutard_low_response[, i]
+  ttest_result <- t.test(biomarker1, biomarker2)
+  pvalue <- ttest_result$p.value
+  biomarker_name <- colnames(alutard_high_response)[i]
+  print(paste("P-value for", biomarker_name, ":", pvalue))
+  p_values_alutard[i] <- pvalue
+  
+  
+}
+
+# Create empty vectors to store the p-values, t-statistics, and effect sizes
+p_values_alutard <- numeric(ncol(alutard_high_response))
+t_statistic_alutard <- numeric(ncol(alutard_high_response))
+effect_size_alutard <- numeric(ncol(alutard_high_response))
+
+
+# Loop through each biomarker and perform a t-test
+measurements <- colnames(alutard_df)[3:18]
+treatx <- 'Alutard'
+
+for (i in 1:ncol(alutard_high_response)) {
+  biomarker1 <- alutard_high_response[, i]
+  biomarker2 <- alutard_low_response[, i]
+  ttest_result <- t.test(biomarker1, biomarker2)
+  pvalue <- ttest_result$p.value
+  tstatistic <- ttest_result$statistic
+  cohens_d <- abs(mean(biomarker1) - mean(biomarker2)) / sd(c(biomarker1, biomarker2))
+  biomarker_name <- colnames(alutard_high_response)[i]
+  print(paste("P-value for", biomarker_name, ":", pvalue))
+  print(paste("t-statistic for", biomarker_name, ":", t_stat))
+  print(paste("Cohen's d for", biomarker_name, ":", cohens_d))
+  p_values_alutard[i] <- pvalue
+  t_statistic_alutard[i] <- tstatistic
+  effect_size_alutard[i] <- cohens_d
+  
+}
+
+
+
+
+# new dataframe with the Biomarker and p-values 
+
+biomarker_alutard <- data.frame(Parameter = names(alutard_df)[3:18], p_value = p_values_alutard, t_statistic = t_statistic_alutard, effect_size = effect_size_alutard)
+
+biomarker_alutard$Treatment <- "Alutard"
+
+
+
+#######################BM41############################## 
+
+#Subset data 
+
+BM41_high_response <- bm41_top5[3:18]
+
+BM41_low_response <- bm41_bottom5[3:18]
+
+# Create an empty vector to store the p-values
+p_values_BM41 <- vector(length = ncol(BM41_high_response))
+
+# Loop through each biomarker and perform a t-test
+
+for (i in 1:ncol(BM41_high_response)) {
+  biomarker3 <- BM41_high_response[, i]
+  biomarker4 <- BM41_low_response[, i]
+  ttest_result <- t.test(biomarker3, biomarker4)
+  pvalue <- ttest_result$p.value
+  biomarker_name <- colnames(BM41_high_response)[i]
+  print(paste("P-value for", biomarker_name, ":", pvalue))
+  p_values_BM41[i] <- pvalue
+}
+
+
+
+# Initialize vectors to store results
+p_values_BM41 <- numeric(ncol(BM41_high_response))
+t_statistic_BM41 <- numeric(ncol(BM41_high_response))
+effect_size_BM41 <- numeric(ncol(BM41_high_response))
+
+
+# Loop through each biomarker and perform a t-test
+for (i in 1:ncol(BM41_high_response)) {
+  biomarker3 <- BM41_high_response[, i]
+  biomarker4 <- BM41_low_response[, i]
+  ttest_result <- t.test(biomarker3, biomarker4)
+  pvalue <- ttest_result$p.value
+  t_stat <- ttest_result$statistic
+  cohens_d <- abs(mean(biomarker3) - mean(biomarker4)) / sd(c(biomarker3, biomarker4))
+  biomarker_name <- colnames(BM41_high_response)[i]
+  print(paste("P-value for", biomarker_name, ":", pvalue))
+  print(paste("t-statistic for", biomarker_name, ":", t_stat))
+  print(paste("Cohen's d for", biomarker_name, ":", cohens_d))
+  p_values_BM41[i] <- pvalue
+  t_statistic_BM41[i] <- t_stat
+  effect_size_BM41[i] <- cohens_d
+  
+}
+
+
+
+# new dataframe with the Biomarker and p-values 
+
+biomarker_BM41 <- data.frame(Parameter = names(bm41_df)[3:18],p_value = p_values_BM41, t_statistic = t_statistic_BM41, effect_size = effect_size_BM41)
+
+biomarker_BM41$Treatment <- "BM41"
+
+
+
+
+# Combine the two dataframes
+
+Treatment_pvalues <- bind_rows(biomarker_alutard, biomarker_BM41)
+
+
+
+Roc_curve_analysis <- read_excel("~/Clinical_Trial_Master_project/Clinical_Trail_BM41_Analysis/data_generated/Roc_curve_analysis.xlsx")
+View(Roc_curve_analysis)
+
+
+roc_timepoint3 <- Roc_curve_analysis %>% 
+  filter(Timepoint == 3) 
+
+roc_timepoint3 <- rename(roc_timepoint3, Parameter = Measurement)
+
+
+# Umbenennen der Spaltennamen des zweiten Dataframes
+
+
+Biomarker_df <- merge.data.frame(Treatment_pvalues,roc_timepoint3, by= c("Parameter", "Treatment"), all.x = TRUE )
+    
+view(Biomarker_df)
+
+
+
+
+##########Visulizing AUC vs. p_value ############
+
+# Define a threshold for AUC and  p_value
+
+AUC_threshold <- 0.8
+p_value_threshold <- 0.05
+
+# Create a new column indicating whether the measurement is high AUC and low p_value
+Biomarker_df$Significant <- ifelse(Biomarker_df$AUC >= AUC_threshold & Biomarker_df$p_value <= p_value_threshold, "yes", "no")
+
+
+
+# filter and print highlighted parameters
+significant_param <- Biomarker_df %>%
+  filter(Significant == "yes") %>%
+  select(Parameter, AUC,p_value,Treatment)
+
+
+
+# Create the scatter plot
+ggplot(Biomarker_df, aes(x = AUC, y = p_value, color = Significant)) +
+  geom_point() +
+  scale_color_manual(values = c("no" = "black", "yes" = "red")) +
+  facet_wrap(~ Treatment) + 
+  theme_bw()+
+  labs(title = "AUC vs. p value Biomarker in high a low response degree group (based on rBet v 1 sIgG)",
+       x = "AUC Prediction power Treatment vs. Placebo",
+       y = "p value high vs. low response to treatment")
+
+
+# Calculate adjusted p-value using the Benjamini-Hochberg method
+Biomarker_df$adj_pvalue <- p.adjust(Biomarker_df$p_value, method = "BH")
+
+# Take the negative logarithm of the adjusted p-value
+Biomarker_df$log_adj_pvalue <- -log10(Biomarker_df$adj_pvalue)
+
+# Create a scatter plot with t-statistic as color
+ggplot(Biomarker_df, aes(x = AUC, y = log_adj_pvalue)) +
+  geom_point() +
+  scale_color_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  facet_wrap(~ Treatment) + 
+  theme_bw() +
+  xlim(0, 1) +
+  labs(title = "AUC vs. adjusted p-value Biomarker in high a low response degree group (based on rBet v 1 sIgG)",
+       x = "AUC Prediction power Treatment vs. Placebo",
+       y = "-log10(adjusted p-value) high vs. low response to treatment",
+       color = "t-statistic") +
+  guides(color = guide_colorbar(title = "t-statistic"))
+
+
+# Correlation t=1 and t=3 ------------------------------
+
+view(df_a)
+
+# Select columns for timepoint 1 and 3
+tp1_cols <- df_a[df_a$Timepoint == 1, 3:18]
+
+tp3_cols <- df_a[df_a$Timepoint == 3, 3:18]
+
+# Calculate correlation matrix
+cor_matrix <- cor(tp1_cols, tp3_cols)
+
+# View correlation matrix
+cor_matrix
+
+
+
+library(corrplot)
+
+
+
+corrplot(cor_matrix)
+
+corrplot(cor_matrix, method = "color", type = "upper", order = "hclust", addCoef.col = "black", tl.col = "black")
+
+library(ComplexHeatmap)
+library(RColorBrewer)
+library(grDevices)
+
+
+
+Heatmap(
+  cor_matrix,
+  name = "Correlation",
+  column_title = "Timepoint 3",
+  row_title = "Timepoint 1",
+  col = colorRampPalette(c("blue", "white", "red"))(100),
+  
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Tidy the dataset to use pivot 
+
+combined_df <- combined_df %>%
+  mutate(response_degree = recode(response_degree, "high" = 1, "low" = 2, "intermediate" = 3))
+
+
+ndf <- subset(combined_df, select = -c(Group,ID, Timepoint,cluster_3K_a,cluster_5K_a, cluster_4K_a))
+
+# Set TimeID as row names
+rownames(ndf) <- ndf$TimeID 
+ndf <- ndf[, -17] 
+str(ndf)
+
+
+# Testing the parameter 
+
+#ALUTARD 
+
+# filter for rows with Alutard in the row name
+
+
+alutard_data <- ndf %>%
+  rownames_to_column(var = "TimeID") %>%
+  filter(str_detect(TimeID, "Alutard")) %>%
+  select(-c(TimeID)) # remove unnecessary columns
+
+
+
+# filter for rows with BM41 in the row name
+bm41_data <- ndf %>%
+  rownames_to_column(var = "TimeID") %>%
+  filter(str_detect(TimeID, "BM41")) %>%
+  select(-c(TimeID)) # remove unnecessary columns
+
+# Pivot the data into a longer format
+
+alutard_data_longer <- alutard_data %>% 
+  pivot_longer(cols = everything(), names_to = "parameter", values_to = "value") %>%
+  separate(parameter, into = c("parameter", "response_degree"), sep = "_") %>%
+  select(-response_degree) # remove response_degree column
+
+
+# perform t-test for each parameter between response_degree 1 and 2
+alutard_results <- alutard_data %>%
+  pivot_longer(cols = everything(), names_to = "Parameter", values_to = "Value")
+  group_by(Parameter) %>%
+  summarize(p_value = t.test(Value[response_degree == 1], Value[response_degree == 2])$p.value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Calculate t-test for each parameter between high and low response groups for each treatment
-t_test_results <- combined_df %>%
-  filter(response_degree != "intermediate") %>%
+t_test_results <- ndf %>%
+  filter(response_degree != "3") %>%
   pivot_longer(cols = -c(Group, response_degree)) %>%
-  group_by(Group,response_degree) %>%
+  group_by(group,name, response_degree) %>%
   summarise(p.value = t.test(value ~ response_degree)$p.value,
             diff = diff(t.test(value ~ response_degree)$estimate)) %>%
   pivot_wider(names_from = response_degree, values_from = c(p.value, diff))
@@ -99,6 +508,8 @@ table_output <- t_test_results %>%
 
 # Display table
 table_output
+
+
 
 
 
@@ -129,7 +540,7 @@ ggplot(t_test_results, aes(x = diff, y = reorder(name, diff), color = group)) +
 
 
 
-
+#rBet v 1 sIgG is also significantly different in the clusters 1 and 2 
 
 
 # Create a subset of the data frame with only the rows that have cluster_5k_a = 1
@@ -151,78 +562,19 @@ for (col in names(df_a)[3:18]) {
 t.test(rBet.v.1.sIgG ~ cluster_5K_a, data = df_a, subset = cluster_5K_a %in% c('1', '2'))
 
 
-##################Direct Analysis rBetv1 sIgG as proxy for response #################
-
-
-#Create a new column called "Response"
-
-df$Response <- NA
-# Select the rows with timepoint 3 and Alutard and BM41
-df_subset <- df[df$timepoint == '3' & df$Alutard == 'Alutard' & df$BM41 == 'BM41',]
-
-# Sort the data frame by r_bet_v_1_s_ig_g
-df_subset <- df_subset[order(df_subset$r_bet_v_1_s_ig_g),]
-
-# Select the top 5 rows
-top_5 <- df_subset[1:5,]
-
-# Assign the value 'High Response' to the top 5 rows
-top_5$Response <- 'High Response'
-
-# Select the bottom 5 rows
-bottom_5 <- df_subset[(nrow(df_subset)-4):nrow(df_subset),]
-
-# Assign the value 'Low Response' to the bottom 5 rows
-bottom_5$Response <- 'Low Response'
-
-# Select the remaining rows
-intermediate <- df_subset[6:(nrow(df_subset)-5),]
-
-# Assign the value 'Intermediate Response' to the remaining rows
-intermediate$Response <- 'Intermediate Response'
-
-# Combine the three data frames
-df_subset <- rbind(top_5, intermediate, bottom_5)
-
-# Replace the original data frame with the new one
-df[df$timepoint == '3' & df$Alutard == 'Alutard' & df$BM41 == 'BM41',] <- df_subset
 
 
 
 
-# Get the highest 5 and lowest 5 values from r_bet_v_1_s_ig_g in Alutard and BM41 group 
-
-# Subset the data according to Treatment
-
-df_a_Alutard <- subset(df_a, Group == 'Alutard')
-
-df_a_BM41 <- subset(df_a, Group == 'BM41')
-
-# sort 
-
-#Alutard r_bet_v_1_s_ig_g
-
-high_5_proxy <- sort(df_a_Alutard$rBet.v.1.sIgG, decreasing = TRUE)[1:5]
-
-low_5_proxy <- sort(df_a_Alutard$rBet.v.1.sIgG)[1:5]
-
-# Test if the highest 5 and lowest 5 values are significantly different
-t.test(high_5_proxy, low_5_proxy)
 
 
 
-#BM41  r_bet_v_1_s_ig_g
-
-high_5_proxy_b <- sort(df_a_BM41$rBet.v.1.sIgG, decreasing = TRUE)[1:5]
-
-low_5_proxy_b <- sort(df_a_BM41$rBet.v.1.sIgG)[1:5]
-
-# Test if the highest 5 and lowest 5 values are significantly different
-t.test(high_5_proxy_b, low_5_proxy_b)
 
 
 
-# display the differences between this top 5 and bottom 5 r_bet_v_1_s_ig_g in other measurements 
+
+
+ 
 
 
 
